@@ -7,10 +7,20 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
 
+import javax.inject.Inject;
 import javax.net.ssl.HttpsURLConnection;
+
+import org.springframework.security.oauth.provider.ConsumerDetails;
+
+import oauth.signpost.OAuthConsumer;
+import oauth.signpost.basic.DefaultOAuthConsumer;
 
 public class HttpHelperImpl implements HttpHelper {
 
+  
+  @Inject
+  public ConsumerDetails consumerDetails;
+  
   @Override
   public String readUrl(String url) {
     return readUrl(url, false);
@@ -26,10 +36,13 @@ public class HttpHelperImpl implements HttpHelper {
     URLConnection urlConn = null;
     InputStreamReader in = null;
     try {
+      OAuthConsumer consumer = new DefaultOAuthConsumer(consumerDetails.getConsumerKey(), "odfsEhGBu9iWgTt1");
       URL getUrl = new URL(url);
       urlConn = isSSL? (HttpsURLConnection)getUrl.openConnection() : (HttpURLConnection)getUrl.openConnection();
-      if (urlConn != null)
+      if (urlConn != null) {
         urlConn.setReadTimeout(60 * 1000);
+        consumer.sign(urlConn);
+      }
       if (urlConn != null && urlConn.getInputStream() != null) {
         in = new InputStreamReader(urlConn.getInputStream(), Charset.defaultCharset());
         BufferedReader bufferedReader = new BufferedReader(in);

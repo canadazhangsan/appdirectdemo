@@ -4,7 +4,7 @@ import javax.inject.Inject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.oauth.provider.ConsumerDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,6 +14,13 @@ import com.taoran.appdirect.domain.model.AppDirectResponse;
 import com.taoran.appdirect.domain.model.SubscriptionEvent;
 import com.taoran.appdirect.domain.parser.AppDirectEventMessageParser;
 import com.taoran.appdirect.util.HttpHelper;
+
+import oauth.signpost.OAuthConsumer;
+import oauth.signpost.basic.DefaultOAuthConsumer;
+import oauth.signpost.exception.OAuthCommunicationException;
+import oauth.signpost.exception.OAuthExpectationFailedException;
+import oauth.signpost.exception.OAuthMessageSignerException;
+import oauth.signpost.signature.QueryStringSigningStrategy;
 
 
 @RestController
@@ -28,11 +35,13 @@ public class SubscriptionController {
   private AppDirectEventMessageParser appDirectEventMessageParser;  
   @Inject
   private HttpHelper httpHelper;
+  @Inject
+  public ConsumerDetails consumerDetails;
   
   
   
   @GetMapping(path = "/create/notification")
-  public AppDirectResponse addNewUserHandler(@RequestParam String eventUrl) {
+  public void addNewUserHandler(@RequestParam String eventUrl) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException {
     LOGGER.debug("eventUrl:{}", eventUrl);
     AppDirectResponse response = new AppDirectResponse();
     if (eventUrl != null) {
@@ -48,7 +57,11 @@ public class SubscriptionController {
       response.setSuccess(FAILED);
       response.setMessage("Didn't get the event url!");
     }
-    return response;
+    OAuthConsumer consumer = new DefaultOAuthConsumer(consumerDetails.getConsumerKey(), "odfsEhGBu9iWgTt1");
+    consumer.setSigningStrategy( new QueryStringSigningStrategy());
+    String url = "https://www.appdirect.com/AppDirect/finishorder?success=true&accountIdentifer=" + response.getAccountidentifier();
+    String signedUrl = consumer.sign(url);
+    httpHelper.readUrl(signedUrl);
   }
 
 }
